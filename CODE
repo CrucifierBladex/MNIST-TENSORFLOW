@@ -1,0 +1,57 @@
+import keras.datasets.mnist as mnist
+(features_train,label_train),(features_test,label_test)=mnist.load_data()
+from PIL import Image
+features_train=features_train/255.0
+features_test=features_test/255.0
+def flatten(matrix):
+    return [elem for row in matrix for elem in row]
+features_train_vector=[flatten(image) for image in features_train]
+features_test_vector=[flatten(image) for image in features_test]
+import numpy as np
+label_train_vector=np.zeros((label_train.size,10))
+for i ,label in enumerate(label_train_vector):
+    label[label_train[i]]=1
+label_test_vector=np.zeros((label_test.size,10))
+for i ,label in enumerate(label_test_vector):
+    label[label_test[i]]=1
+import tensorflow as tf
+f=tf.nn.sigmoid
+x=tf.placeholder(tf.float32,[None,28*28])
+W=tf.Variable(tf.random_normal([784,10]))
+b=tf.Variable(tf.random_normal([10]))
+y=f(tf.add(tf.matmul(x,W),b))
+def classify(x):
+  return f(tf.add(tf.matmul(x,W),b))
+y=classify(x)
+y_true=tf.placeholder(tf.float32,[None,10])
+cross_entropy=tf.nn.sigmoid_cross_entropy_with_logits(
+logits=y,
+labels=y_true
+)
+cost=tf.reduce_mean(cross_entropy)
+optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.5).minimize(cost)
+session=tf.Session()
+tf.global_variables_initializer()
+session.run(tf.global_variables_initializer())
+iteration=300
+batch_size=200
+for i in range(iteration):
+  min=i*batch_size
+  max=(i+1)*batch_size
+  dictionary={
+      x:features_train_vector[min:max],
+      y_true:label_train_vector[min:max]
+  }
+  session.run(optimizer,feed_dict=dictionary)
+  print('iteration:',i)
+  session.run(classify(x),feed_dict={
+      x:features_test_vector[:10]
+  })
+  label_predicted=session.run(classify(x),feed_dict={x:features_test_vector})
+  label_predicted=[np.argmax(label) for label in label_predicted]
+  from sklearn.metrics import confusion_matrix,accuracy_score,precision_score,recall_score,f1_score
+  confusion_matrix(label_test,label_predicted)
+  print(accuracy_score(label_test,label_predicted))
+  precision_score(label_test,label_predicted,average='weighted')
+  recall_score(label_test,label_predicted,average='weighted')
+  f1_score(label_test,label_predicted,average='weighted')
